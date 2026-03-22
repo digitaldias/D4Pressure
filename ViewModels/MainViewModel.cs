@@ -426,15 +426,21 @@ public partial class MainViewModel : ObservableObject
     // ── Settings (character registry + app-level prefs) ───────────────────────
 
     // ── Window position (not observable — UI doesn't bind these) ─────────────
-    public int? MainWindowX { get; set; }
-    public int? MainWindowY { get; set; }
-    public int? OverlayX    { get; set; }
-    public int? OverlayY    { get; set; }
+    public int? MainWindowX    { get; set; }
+    public int? MainWindowY    { get; set; }
+    public int? OverlayX       { get; set; }
+    public int? OverlayY       { get; set; }
+    public int? OverlayW       { get; set; }
+    public int? OverlayH       { get; set; }
+    public int? OverlayScreenIdx { get; set; }
 
-    public void UpdateOverlayPosition(int x, int y)
+    public void SaveOverlayGeometry(int x, int y, int w, int h, int screenIdx)
     {
-        OverlayX = x;
-        OverlayY = y;
+        OverlayX         = x;
+        OverlayY         = y;
+        OverlayW         = w;
+        OverlayH         = h;
+        OverlayScreenIdx = screenIdx;
         SaveSettings();
     }
 
@@ -443,10 +449,13 @@ public partial class MainViewModel : ObservableObject
         string? LastCharacterKey,
         int ToggleVk = 0,
         string? ToggleKeyName = null,
-        int? MainWindowX = null,
-        int? MainWindowY = null,
-        int? OverlayX    = null,
-        int? OverlayY    = null);
+        int? MainWindowX    = null,
+        int? MainWindowY    = null,
+        int? OverlayX       = null,
+        int? OverlayY       = null,
+        int? OverlayW       = null,
+        int? OverlayH       = null,
+        int? OverlayScreenIdx = null);
 
     private record CharacterEntry(string Name, string Class);
 
@@ -473,7 +482,10 @@ public partial class MainViewModel : ObservableObject
                 MainWindowX,
                 MainWindowY,
                 OverlayX,
-                OverlayY);
+                OverlayY,
+                OverlayW,
+                OverlayH,
+                OverlayScreenIdx);
             File.WriteAllText(SettingsPath,
                 JsonSerializer.Serialize(s, JsonOptions));
         }
@@ -546,8 +558,11 @@ public partial class MainViewModel : ObservableObject
         // Restore window positions — signal windows via PropertyChanged
         MainWindowX = settings?.MainWindowX;
         MainWindowY = settings?.MainWindowY;
-        OverlayX    = settings?.OverlayX;
-        OverlayY    = settings?.OverlayY;
+        OverlayX         = settings?.OverlayX;
+        OverlayY         = settings?.OverlayY;
+        OverlayW         = settings?.OverlayW;
+        OverlayH         = settings?.OverlayH;
+        OverlayScreenIdx = settings?.OverlayScreenIdx;
         OnPropertyChanged(nameof(MainWindowX));
 
         var lastKey = settings?.LastCharacterKey;

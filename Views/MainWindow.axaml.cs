@@ -1,10 +1,12 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using D4Pressure.Services;
 using D4Pressure.ViewModels;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -19,8 +21,9 @@ public partial class MainWindow : Window
     private OverlayWindow? _overlay;
 
     // ── Win32 window style ────────────────────────────────────────────────────
-    private const int GWL_EXSTYLE       = -20;
-    private const int WS_EX_NOACTIVATE  = 0x08000000;
+    private const int GWL_EXSTYLE        = -20;
+    private const int WS_EX_NOACTIVATE   = 0x08000000;
+    private const int DefaultOverlayWidth = 260;
 
     [DllImport("user32.dll")] private static extern int  GetWindowLong(nint hWnd, int nIndex);
     [DllImport("user32.dll")] private static extern int  SetWindowLong(nint hWnd, int nIndex, int dwNewLong);
@@ -108,7 +111,17 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        _overlay?.Close();
+        if (_overlay is not null)
+        {
+            // Set VM properties only — SaveOnExit below handles the single disk write
+            var pos = _overlay.Position;
+            Vm.OverlayX         = pos.X;
+            Vm.OverlayY         = pos.Y;
+            Vm.OverlayW         = (int)_overlay.Width;
+            Vm.OverlayH         = (int)_overlay.Height;
+            Vm.OverlayScreenIdx = GetScreenIndex(pos);
+            _overlay.Close();
+        }
         GlobalHotkey.Uninstall();
         if (Vm.IsRunning) Vm.Toggle_Hotkey();
         Vm.SaveOnExit();
@@ -123,6 +136,7 @@ public partial class MainWindow : Window
         {
             _inputHasFocus = true;
             SetNoActivate(false);
+            Activate(); // bring window to foreground so keyboard input reaches the text field
         }
     }
 
@@ -198,19 +212,23 @@ public partial class MainWindow : Window
     {
         if (_overlay is not null)
         {
+            SaveOverlayGeometryFromWindow(_overlay);
             _overlay.Close();
-            // _overlay is cleared in the Closed handler below
+            // _overlay is cleared in the Closed handler
             return;
         }
 
         _overlay = new OverlayWindow { DataContext = Vm };
-        _overlay.Closed += (_, _) =>
-        {
-            Vm.UpdateOverlayPosition(_overlay.Position.X, _overlay.Position.Y);
-            _overlay = null;
-        };
+        _overlay.Closed += (_, _) => _overlay = null;
 
-        // Restore saved overlay position if it lands on a valid screen
+        // Restore saved size
+        if (Vm.OverlayW is int ow && Vm.OverlayH is int oh)
+        {
+            _overlay.Width  = ow;
+            _overlay.Height = oh;
+        }
+
+        // Restore saved position — with screen-aware fallback
         bool positioned = false;
         if (Vm.OverlayX is int ox && Vm.OverlayY is int oy)
         {
@@ -220,21 +238,49 @@ public partial class MainWindow : Window
                 _overlay.Position = saved;
                 positioned = true;
             }
+            else if (Vm.OverlayScreenIdx is int si)
+            {
+                // The screen the overlay was on is gone — find it by sorted index
+                var sorted = SortedScreens();
+                var target = si < sorted.Count ? sorted[si] : Screens.Primary;
+                if (target is not null)
+                {
+                    _overlay.Position = CenteredOnScreen(target, Vm.OverlayW ?? DefaultOverlayWidth);
+                    positioned = true;
+                }
+            }
         }
 
         if (!positioned)
         {
             var screen = Screens.Primary;
             if (screen is not null)
-            {
-                var x = screen.Bounds.X + (screen.Bounds.Width  - 260) / 2;
-                var y = screen.Bounds.Y + 60;
-                _overlay.Position = new Avalonia.PixelPoint(x, y);
-            }
+                _overlay.Position = CenteredOnScreen(screen, Vm.OverlayW ?? DefaultOverlayWidth);
         }
 
         _overlay.Show();
     }
+
+    private void SaveOverlayGeometryFromWindow(OverlayWindow overlay)
+    {
+        var pos = overlay.Position;
+        Vm.SaveOverlayGeometry(pos.X, pos.Y, (int)overlay.Width, (int)overlay.Height, GetScreenIndex(pos));
+    }
+
+    private int GetScreenIndex(Avalonia.PixelPoint pos)
+    {
+        var sorted = SortedScreens();
+        for (int i = 0; i < sorted.Count; i++)
+            if (sorted[i].Bounds.Contains(pos))
+                return i;
+        return 0;
+    }
+
+    private List<Screen> SortedScreens() =>
+        Screens.All.OrderBy(s => s.Bounds.X).ThenBy(s => s.Bounds.Y).ToList();
+
+    private static Avalonia.PixelPoint CenteredOnScreen(Screen screen, int width) =>
+        new(screen.Bounds.X + (screen.Bounds.Width - width) / 2, screen.Bounds.Y + 60);
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

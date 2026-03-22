@@ -36,7 +36,7 @@ D4Pressure/
 
 ## Key architecture decisions
 
-**NOACTIVATE**: Both windows carry `WS_EX_NOACTIVATE` so they never steal focus from the game. The style is lifted temporarily when a TextBox or the capture overlay gets focus, then restored.
+**NOACTIVATE**: Both windows carry `WS_EX_NOACTIVATE` so they never steal focus from the game. The style is lifted temporarily when a TextBox or the capture overlay gets focus, then restored. When lifting NOACTIVATE in response to a TextBox `GotFocus` event, `Activate()` must also be called — removing the flag alone is not enough because the initial click fired while the flag was still set, so the window never became the Win32 foreground window and keyboard input still goes to the game.
 
 **Global hook vs RegisterHotKey**: Uses `WH_KEYBOARD_LL` (not `RegisterHotKey`) so hotkeys fire even when the game window is foreground. The hook filters `LLKHF_INJECTED` (0x10 in flags at offset 8 of KBDLLHOOKSTRUCT) to ignore synthetic keystrokes sent by the app itself — critical to prevent F2-bound rows from toggling the loop off.
 
@@ -46,7 +46,7 @@ D4Pressure/
 
 **Character profiles**: Per-character JSON at `%LocalAppData%\D4Pressure\characters\{Name_Class}.json`. App settings (character list, last character, toggle key, window positions) at `%LocalAppData%\D4Pressure\settings.json`.
 
-**Window position persistence**: `MainViewModel` holds `MainWindowX/Y` and `OverlayX/Y` as plain int? properties. `AutoLoad` sets them and raises `PropertyChanged(nameof(MainWindowX))` — MainWindow listens with a one-shot handler to reposition. Overlay position saved on close via `UpdateOverlayPosition`. Positions validated against `Screens.All` before applying.
+**Window geometry persistence**: `MainViewModel` holds `MainWindowX/Y`, `OverlayX/Y/W/H`, and `OverlayScreenIdx` as plain `int?` properties (not observable). `AutoLoad` sets them and raises `PropertyChanged(nameof(MainWindowX))` — MainWindow listens with a one-shot handler to reposition. Overlay position **and** size must be read BEFORE calling `_overlay.Close()` (not in the `Closed` handler — Avalonia resets window state during teardown). `OverlayScreenIdx` is a stable screen index (screens sorted by `Bounds.X, Bounds.Y`) used for fallback when the saved position is off-screen. Positions validated against `Screens.All` before applying.
 
 ## LSP false positives
 

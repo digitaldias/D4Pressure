@@ -36,6 +36,12 @@ If you're in the same boat, this is for you.
 
 Hotkeys are global — the game does not need to lose focus.
 
+## Windows SmartScreen warning
+
+On first run, Windows may show a "Windows protected your PC" warning. This happens because the app isn't signed with a paid certificate. Click **More info**, then **Run anyway**.
+
+The full source code is on this page if you want to verify what it does before running it.
+
 ## Requirements
 
 - Windows 10 or 11

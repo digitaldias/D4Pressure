@@ -457,7 +457,8 @@ public partial class MainViewModel : ObservableObject
         int? OverlayW        = null,
         int? OverlayH        = null,
         int? OverlayScreenIdx = null,
-        bool OverlayVisible  = false);
+        bool OverlayVisible  = false,
+        double OverlayOpacity = 0.92);
 
     private record CharacterEntry(string Name, string Class);
 
@@ -488,7 +489,8 @@ public partial class MainViewModel : ObservableObject
                 OverlayW,
                 OverlayH,
                 OverlayScreenIdx,
-                OverlayVisible);
+                OverlayVisible,
+                WindowOpacity);
             File.WriteAllText(SettingsPath,
                 JsonSerializer.Serialize(s, JsonOptions));
         }
@@ -567,6 +569,7 @@ public partial class MainViewModel : ObservableObject
         OverlayH         = settings?.OverlayH;
         OverlayScreenIdx = settings?.OverlayScreenIdx;
         OverlayVisible   = settings?.OverlayVisible ?? false;
+        WindowOpacity    = settings?.OverlayOpacity ?? 0.92;
         OnPropertyChanged(nameof(MainWindowX));
         OnPropertyChanged(nameof(OverlayVisible));
 

@@ -4,6 +4,10 @@ A lightweight Windows desktop overlay for automating key and mouse button presse
 
 > **ToS notice:** Blizzard's EULA broadly prohibits third-party automation software. D4Pressure only sends keystrokes — it does not inject into the game, read memory, or touch game files. Blizzard's enforcement has historically targeted speed hacks, map hacks, and exploits rather than simple key automation tools like this one. That said, no tool is risk-free. Use your own judgement.
 
+![Main window](Assets/screenshot-main.png)
+
+![Overlay](Assets/screenshot-overlay.png)
+
 ## Features
 
 - **Per-key rows** — bind any keyboard key or mouse button, set mode (Hold or Tap), delay, and a label

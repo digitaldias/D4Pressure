@@ -329,9 +329,15 @@
           <StackPanel Margin="18,18,18,18" Spacing="0">
 
             <!-- Title -->
-            <TextBlock Text="D4Pressure"
-                       FontSize="26" FontWeight="Black"
-                       Foreground="#ff6600"/>
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+              <TextBlock Text="D4Pressure"
+                         FontSize="26" FontWeight="Black"
+                         Foreground="#ff6600"
+                         VerticalAlignment="Center"/>
+              <Image Source="avares://D4Pressure/Assets/app.png"
+                     Width="36" Height="36"
+                     VerticalAlignment="Center"/>
+            </StackPanel>
             <TextBlock Text="Skill Rotator"
                        FontSize="11" Foreground="#555555"
                        Margin="2,2,0,0"/>

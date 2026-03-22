@@ -2,6 +2,14 @@
 
 A lightweight Windows desktop overlay for automating key and mouse button presses in Diablo IV. Runs as a topmost, always-visible window that never steals focus from the game.
 
+## Why this exists
+
+Diablo IV is a game that asks a lot of your hands. Skill rotations mean hammering the same keys hundreds of times a session, and if you have any kind of hand or joint condition, that adds up fast.
+
+I built this because I had no other option. Repeated keypresses were causing real pain, and I still wanted to play. There are no hardware macro keyboards in this story — just a developer who needed a solution and wrote one.
+
+If you're in the same boat, this is for you.
+
 > **ToS notice:** Blizzard's EULA broadly prohibits third-party automation software. D4Pressure only sends keystrokes — it does not inject into the game, read memory, or touch game files. Blizzard's enforcement has historically targeted speed hacks, map hacks, and exploits rather than simple key automation tools like this one. That said, no tool is risk-free. Use your own judgement.
 
 ![Main window](Assets/screenshot-main.png)

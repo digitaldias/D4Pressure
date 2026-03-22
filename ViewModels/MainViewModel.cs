@@ -30,6 +30,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private double _windowOpacity = 0.92;
     [ObservableProperty] private KeyRowViewModel? _capturingRow;
     [ObservableProperty] private string _scanStatus = string.Empty;
+    [ObservableProperty] private string _saveStatus = string.Empty;
     [ObservableProperty] private CharacterProfile? _selectedCharacter;
     [ObservableProperty] private bool _isAddingCharacter;
     [ObservableProperty] private string _newCharacterName = string.Empty;
@@ -68,8 +69,10 @@ public partial class MainViewModel : ObservableObject
     }
 
     private CancellationTokenSource? _cts;
+    private CancellationTokenSource? _saveCts;
     private readonly List<(ushort scanCode, bool isMouse, MouseButton mouseBtn)> _heldInputs = new();
     private bool _suppressCharacterChange;
+    private bool _isLoading;
     private CharacterProfile? _previousCharacter;
 
     public MainViewModel()
@@ -258,6 +261,28 @@ public partial class MainViewModel : ObservableObject
     {
         row.RemoveRequested  += r => Rows.Remove(r);
         row.CaptureRequested += r => CapturingRow = r;
+        row.PropertyChanged  += (_, e) =>
+        {
+            if (_isLoading) return;
+            if (e.PropertyName is nameof(KeyRowViewModel.IsCapturing)
+                               or nameof(KeyRowViewModel.IsSystemRunning)
+                               or nameof(KeyRowViewModel.IsActive)
+                               or nameof(KeyRowViewModel.KeyDisplayName)
+                               or nameof(KeyRowViewModel.Icon)) return;
+            if (SelectedCharacter is { } ch) ScheduleSave(ch);
+        };
+    }
+
+    private void ScheduleSave(CharacterProfile profile)
+    {
+        _saveCts?.Cancel();
+        _saveCts = new CancellationTokenSource();
+        var cts = _saveCts;
+        Task.Delay(500, cts.Token).ContinueWith(_ =>
+        {
+            if (!cts.IsCancellationRequested)
+                Avalonia.Threading.Dispatcher.UIThread.Post(() => SaveCharacter(profile));
+        }, TaskScheduler.Default);
     }
 
     private void EnsureMinimumRows()
@@ -504,46 +529,59 @@ public partial class MainViewModel : ObservableObject
             Directory.CreateDirectory(CharactersDir);
             File.WriteAllText(CharacterFilePath(profile),
                 JsonSerializer.Serialize(BuildConfigModel(), JsonOptions));
+            _ = SetSaveStatusAsync($"Saved {DateTime.Now:HH:mm:ss}");
         }
         catch { }
     }
 
+    private async Task SetSaveStatusAsync(string message)
+    {
+        SaveStatus = message;
+        await Task.Delay(3000);
+        if (SaveStatus == message) SaveStatus = string.Empty;
+    }
+
     private async Task LoadCharacterAsync(CharacterProfile profile)
     {
-        var path = CharacterFilePath(profile);
-        if (!File.Exists(path))
-        {
-            Rows.Clear();
-            EnsureMinimumRows();
-            return;
-        }
+        _isLoading = true;
         try
         {
-            await using var fs = File.OpenRead(path);
-            var config = await JsonSerializer.DeserializeAsync<ConfigModel>(fs);
-            if (config is null) { EnsureMinimumRows(); return; }
-            Rows.Clear();
-            foreach (var rc in config.Rows)
+            var path = CharacterFilePath(profile);
+            if (!File.Exists(path))
             {
-                var row = new KeyRowViewModel
-                {
-                    ActionLabel      = rc.ActionLabel,
-                    Mode             = Enum.Parse<KeyMode>(rc.Mode),
-                    DelayMs          = rc.DelayMs,
-                    IsEnabled        = rc.IsEnabled,
-                    ScanCode         = rc.ScanCode,
-                    IsMouseInput     = rc.IsMouseInput,
-                    MouseButtonIndex = (MouseButton)rc.MouseButtonIndex,
-                    IsSystemRunning  = IsRunning,
-                    Icon             = Base64ToIcon(rc.IconBase64)
-                };
-                if (Enum.TryParse<Key>(rc.KeyName, out var k)) row.Key = k;
-                WireRow(row);
-                Rows.Add(row);
+                Rows.Clear();
+                EnsureMinimumRows();
+                return;
             }
-            EnsureMinimumRows();
+            try
+            {
+                await using var fs = File.OpenRead(path);
+                var config = await JsonSerializer.DeserializeAsync<ConfigModel>(fs);
+                if (config is null) { EnsureMinimumRows(); return; }
+                Rows.Clear();
+                foreach (var rc in config.Rows)
+                {
+                    var row = new KeyRowViewModel
+                    {
+                        ActionLabel      = rc.ActionLabel,
+                        Mode             = Enum.Parse<KeyMode>(rc.Mode),
+                        DelayMs          = rc.DelayMs,
+                        IsEnabled        = rc.IsEnabled,
+                        ScanCode         = rc.ScanCode,
+                        IsMouseInput     = rc.IsMouseInput,
+                        MouseButtonIndex = (MouseButton)rc.MouseButtonIndex,
+                        IsSystemRunning  = IsRunning,
+                        Icon             = Base64ToIcon(rc.IconBase64)
+                    };
+                    if (Enum.TryParse<Key>(rc.KeyName, out var k)) row.Key = k;
+                    WireRow(row);
+                    Rows.Add(row);
+                }
+                EnsureMinimumRows();
+            }
+            catch { EnsureMinimumRows(); }
         }
-        catch { EnsureMinimumRows(); }
+        finally { _isLoading = false; }
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────

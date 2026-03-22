@@ -8,7 +8,7 @@
         Width="960" Height="660"
         MinWidth="860" MinHeight="520"
         Background="#0a0a18"
-        Topmost="True"
+        Topmost="False"
         FontFamily="Inter, Segoe UI, sans-serif"
         WindowStartupLocation="CenterScreen">
 
@@ -150,14 +150,14 @@
   </Window.Styles>
 
   <!-- Root -->
-  <Grid ColumnDefinitions="0.72*,0.28*">
+  <Grid RowDefinitions="*,Auto" ColumnDefinitions="0.72*,0.28*">
 
       <!-- ══════════════════════ LEFT PANEL ══════════════════════ -->
-      <DockPanel Grid.Column="0" Background="#0a0a18">
+      <DockPanel Grid.Row="0" Grid.Column="0" Background="#0a0a18">
 
         <!-- Column header -->
         <Border DockPanel.Dock="Top" Background="#0a0a18" Padding="8,7">
-          <Grid ColumnDefinitions="8,52,*,90,200,56,34">
+          <Grid ColumnDefinitions="8,52,*,90,200,56">
             <TextBlock Grid.Column="2" Text="KEY"
                        Foreground="#ff6600" FontWeight="Bold" FontSize="12"
                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -175,27 +175,6 @@
 
         <Rectangle DockPanel.Dock="Top" Height="1" Fill="#ff6600" Opacity="0.25"/>
 
-        <!-- Add Row button -->
-        <Button DockPanel.Dock="Bottom"
-                Command="{Binding AddRowCommand}"
-                Content="＋  Add Row"
-                Background="#cc5200"
-                Foreground="White"
-                FontWeight="SemiBold"
-                FontSize="13"
-                HorizontalAlignment="Stretch"
-                HorizontalContentAlignment="Center"
-                Height="38"
-                CornerRadius="0"
-                Padding="0">
-          <Button.Styles>
-            <Style Selector="Button:pointerover /template/ ContentPresenter">
-              <Setter Property="Background" Value="#ff6600"/>
-              <Setter Property="Opacity" Value="1"/>
-            </Style>
-          </Button.Styles>
-        </Button>
-
         <!-- Row list -->
         <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                       VerticalScrollBarVisibility="Auto">
@@ -208,7 +187,7 @@
                         Background="#13132a"
                         BorderBrush="#222240"
                         BorderThickness="1">
-                  <Grid ColumnDefinitions="8,52,*,90,200,56,34"
+                  <Grid ColumnDefinitions="8,52,*,90,200,56"
                         MinHeight="54"
                         VerticalAlignment="Stretch">
 
@@ -294,21 +273,6 @@
                                   HorizontalAlignment="Center"
                                   VerticalAlignment="Center"/>
 
-                    <!-- Remove -->
-                    <Button Grid.Column="6"
-                            Classes="remove-btn"
-                            Command="{Binding RemoveCommand}"
-                            Content="×"
-                            Background="Transparent"
-                            Foreground="#555555"
-                            FontSize="18" FontWeight="Bold"
-                            Width="28" Height="28"
-                            Padding="0"
-                            HorizontalContentAlignment="Center"
-                            VerticalContentAlignment="Center"
-                            CornerRadius="4"
-                            VerticalAlignment="Center"/>
-
                   </Grid>
                 </Border>
 
@@ -320,7 +284,7 @@
       </DockPanel>
 
       <!-- ══════════════════════ RIGHT PANEL ══════════════════════ -->
-      <DockPanel Grid.Column="1" Background="#0f0f22">
+      <DockPanel Grid.Row="0" Grid.Column="1" Background="#0f0f22">
 
         <Rectangle DockPanel.Dock="Left" Width="1" Fill="#1a1a38"/>
 
@@ -565,8 +529,20 @@
 
       </DockPanel>
 
+      <!-- ══════════════════════ STATUS BAR ══════════════════════ -->
+      <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+              Background="#07071a"
+              BorderBrush="#1a1a38"
+              BorderThickness="0,1,0,0"
+              Padding="12,5">
+        <TextBlock Text="{Binding SaveStatus}"
+                   Foreground="#444466"
+                   FontSize="11"
+                   VerticalAlignment="Center"/>
+      </Border>
+
       <!-- ══════════ KEY CAPTURE OVERLAY (spans full window) ══════════ -->
-      <Border Grid.Column="0" Grid.ColumnSpan="2"
+      <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
               ZIndex="100"
               IsVisible="{Binding IsCapturing}"
               Background="#dd050510"

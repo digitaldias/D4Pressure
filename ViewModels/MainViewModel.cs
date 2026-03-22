@@ -426,13 +426,14 @@ public partial class MainViewModel : ObservableObject
     // ── Settings (character registry + app-level prefs) ───────────────────────
 
     // ── Window position (not observable — UI doesn't bind these) ─────────────
-    public int? MainWindowX    { get; set; }
-    public int? MainWindowY    { get; set; }
-    public int? OverlayX       { get; set; }
-    public int? OverlayY       { get; set; }
-    public int? OverlayW       { get; set; }
-    public int? OverlayH       { get; set; }
-    public int? OverlayScreenIdx { get; set; }
+    public int?  MainWindowX     { get; set; }
+    public int?  MainWindowY     { get; set; }
+    public int?  OverlayX        { get; set; }
+    public int?  OverlayY        { get; set; }
+    public int?  OverlayW        { get; set; }
+    public int?  OverlayH        { get; set; }
+    public int?  OverlayScreenIdx { get; set; }
+    public bool  OverlayVisible   { get; set; }
 
     public void SaveOverlayGeometry(int x, int y, int w, int h, int screenIdx)
     {
@@ -449,13 +450,14 @@ public partial class MainViewModel : ObservableObject
         string? LastCharacterKey,
         int ToggleVk = 0,
         string? ToggleKeyName = null,
-        int? MainWindowX    = null,
-        int? MainWindowY    = null,
-        int? OverlayX       = null,
-        int? OverlayY       = null,
-        int? OverlayW       = null,
-        int? OverlayH       = null,
-        int? OverlayScreenIdx = null);
+        int? MainWindowX     = null,
+        int? MainWindowY     = null,
+        int? OverlayX        = null,
+        int? OverlayY        = null,
+        int? OverlayW        = null,
+        int? OverlayH        = null,
+        int? OverlayScreenIdx = null,
+        bool OverlayVisible  = false);
 
     private record CharacterEntry(string Name, string Class);
 
@@ -485,7 +487,8 @@ public partial class MainViewModel : ObservableObject
                 OverlayY,
                 OverlayW,
                 OverlayH,
-                OverlayScreenIdx);
+                OverlayScreenIdx,
+                OverlayVisible);
             File.WriteAllText(SettingsPath,
                 JsonSerializer.Serialize(s, JsonOptions));
         }
@@ -563,7 +566,9 @@ public partial class MainViewModel : ObservableObject
         OverlayW         = settings?.OverlayW;
         OverlayH         = settings?.OverlayH;
         OverlayScreenIdx = settings?.OverlayScreenIdx;
+        OverlayVisible   = settings?.OverlayVisible ?? false;
         OnPropertyChanged(nameof(MainWindowX));
+        OnPropertyChanged(nameof(OverlayVisible));
 
         var lastKey = settings?.LastCharacterKey;
         var last = Characters.FirstOrDefault(c => c.Key == lastKey) ?? Characters.FirstOrDefault();

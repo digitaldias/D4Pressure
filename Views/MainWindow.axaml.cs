@@ -72,7 +72,7 @@ public partial class MainWindow : Window
         AddHandler(InputElement.GotFocusEvent,  OnInputGotFocus,  RoutingStrategies.Bubble);
         AddHandler(InputElement.LostFocusEvent, OnInputLostFocus, RoutingStrategies.Bubble);
 
-        // One-shot: reposition window once AutoLoad has set MainWindowX
+        // One-shot: reposition main window once AutoLoad has signalled MainWindowX
         PropertyChangedEventHandler? posHandler = null;
         posHandler = (_, pe) =>
         {
@@ -86,6 +86,17 @@ public partial class MainWindow : Window
             }
         };
         Vm.PropertyChanged += posHandler;
+
+        // One-shot: reopen overlay if it was visible when the app last closed
+        PropertyChangedEventHandler? overlayHandler = null;
+        overlayHandler = (_, pe) =>
+        {
+            if (pe.PropertyName != nameof(MainViewModel.OverlayVisible)) return;
+            Vm.PropertyChanged -= overlayHandler;
+            if (Vm.OverlayVisible)
+                ToggleOverlay();
+        };
+        Vm.PropertyChanged += overlayHandler;
 
         // Track position changes in-memory (persisted on exit)
         PositionChanged += (_, _) =>
@@ -120,7 +131,12 @@ public partial class MainWindow : Window
             Vm.OverlayW         = (int)_overlay.Width;
             Vm.OverlayH         = (int)_overlay.Height;
             Vm.OverlayScreenIdx = GetScreenIndex(pos);
+            Vm.OverlayVisible   = true;  // was open — persist so it reopens next launch
             _overlay.Close();
+        }
+        else
+        {
+            Vm.OverlayVisible = false;
         }
         GlobalHotkey.Uninstall();
         if (Vm.IsRunning) Vm.Toggle_Hotkey();
@@ -212,6 +228,7 @@ public partial class MainWindow : Window
     {
         if (_overlay is not null)
         {
+            Vm.OverlayVisible = false;
             SaveOverlayGeometryFromWindow(_overlay);
             _overlay.Close();
             // _overlay is cleared in the Closed handler
@@ -220,6 +237,7 @@ public partial class MainWindow : Window
 
         _overlay = new OverlayWindow { DataContext = Vm };
         _overlay.Closed += (_, _) => _overlay = null;
+        Vm.OverlayVisible = true;
 
         // Restore saved size
         if (Vm.OverlayW is int ow && Vm.OverlayH is int oh)

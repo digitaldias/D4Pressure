@@ -9,24 +9,15 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Runtime.InteropServices;
 
 namespace D4Pressure.Views;
 
 public partial class MainWindow : Window
 {
     private MainViewModel Vm => (MainViewModel)DataContext!;
-    private nint _hwnd;
-    private bool _inputHasFocus;
     private OverlayWindow? _overlay;
 
-    // ── Win32 window style ────────────────────────────────────────────────────
-    private const int GWL_EXSTYLE        = -20;
-    private const int WS_EX_NOACTIVATE   = 0x08000000;
     private const int DefaultOverlayWidth = 260;
-
-    [DllImport("user32.dll")] private static extern int  GetWindowLong(nint hWnd, int nIndex);
-    [DllImport("user32.dll")] private static extern int  SetWindowLong(nint hWnd, int nIndex, int dwNewLong);
 
     // ── Constructor ───────────────────────────────────────────────────────────
 
@@ -38,25 +29,8 @@ public partial class MainWindow : Window
 
         vm.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(MainViewModel.IsCapturing))
-            {
-                if (vm.IsCapturing)
-                {
-                    SetNoActivate(false);
-                    CaptureOverlay.Focus();
-                }
-                else if (!vm.IsAddingCharacter && !_inputHasFocus)
-                {
-                    SetNoActivate(true);
-                }
-            }
-            else if (e.PropertyName == nameof(MainViewModel.IsAddingCharacter))
-            {
-                if (vm.IsAddingCharacter)
-                    SetNoActivate(false);
-                else if (!vm.IsCapturing && !_inputHasFocus)
-                    SetNoActivate(true);
-            }
+            if (e.PropertyName == nameof(MainViewModel.IsCapturing) && vm.IsCapturing)
+                CaptureOverlay.Focus();
         };
     }
 
@@ -65,10 +39,6 @@ public partial class MainWindow : Window
     protected override void OnOpened(EventArgs e)
     {
         base.OnOpened(e);
-        _hwnd = (nint)TryGetPlatformHandle()!.Handle;
-
-        SetNoActivate(true);
-
         AddHandler(InputElement.GotFocusEvent,  OnInputGotFocus,  RoutingStrategies.Bubble);
         AddHandler(InputElement.LostFocusEvent, OnInputLostFocus, RoutingStrategies.Bubble);
 
@@ -149,23 +119,10 @@ public partial class MainWindow : Window
     private void OnInputGotFocus(object? sender, GotFocusEventArgs e)
     {
         if (e.Source is TextBox)
-        {
-            _inputHasFocus = true;
-            SetNoActivate(false);
-            Activate(); // bring window to foreground so keyboard input reaches the text field
-        }
+            Activate(); // ensure window is foreground so keyboard reaches the TextBox
     }
 
-    private void OnInputLostFocus(object? sender, RoutedEventArgs e)
-    {
-        if (e.Source is not TextBox) return;
-        _inputHasFocus = false;
-        Dispatcher.UIThread.Post(() =>
-        {
-            if (!_inputHasFocus && !Vm.IsCapturing && !Vm.IsAddingCharacter)
-                SetNoActivate(true);
-        });
-    }
+    private void OnInputLostFocus(object? sender, RoutedEventArgs e) { }
 
     // ── Capture overlay — keyboard ────────────────────────────────────────────
 
@@ -301,15 +258,6 @@ public partial class MainWindow : Window
         new(screen.Bounds.X + (screen.Bounds.Width - width) / 2, screen.Bounds.Y + 60);
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private void SetNoActivate(bool noActivate)
-    {
-        if (_hwnd == 0) return;
-        var style = GetWindowLong(_hwnd, GWL_EXSTYLE);
-        if (noActivate) style |=  WS_EX_NOACTIVATE;
-        else            style &= ~WS_EX_NOACTIVATE;
-        SetWindowLong(_hwnd, GWL_EXSTYLE, style);
-    }
 
     private static int KeyToVk(Key key) => key switch
     {

@@ -213,8 +213,11 @@ public partial class MainViewModel : ObservableObject
                 {
                     while (!ct.IsCancellationRequested)
                     {
-                        if (isMouseInput) InputSender.MouseTap(mouseBtn);
-                        else              InputSender.Tap(scanCode);
+                        if (!GlobalHotkey.InputPaused)
+                        {
+                            if (isMouseInput) InputSender.MouseTap(mouseBtn);
+                            else              InputSender.Tap(scanCode);
+                        }
                         var lo = (int)(baseDelay * 0.8);
                         var hi = (int)(baseDelay * 1.2) + 1;
                         try { await Task.Delay(Random.Shared.Next(lo, hi), ct); }
@@ -414,6 +417,15 @@ public partial class MainViewModel : ObservableObject
     private static readonly string SettingsPath  = Path.Combine(AppDataDir, "settings.json");
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
+    // Config bounds — prevents malformed/malicious JSON from hanging the UI
+    private const int    MaxConfigRows   = 100;
+    private const int    MinDelayMs      = 10;
+    private const int    MaxDelayMs      = 5_000;
+    // Windows scan codes: 0x01–0x7F (Set 1 base); extended E0-prefixed codes are stored
+    // as 0xE001–0xE07F by some APIs, giving an upper bound of 0xE07F ≈ 57471.
+    // Reject 0 (no-key) and anything above that ceiling.
+    private const ushort MaxScanCode     = 0xE07F;
+
     private static string CharacterFilePath(CharacterProfile p) =>
         Path.Combine(CharactersDir, p.Key + ".json");
 
@@ -559,13 +571,17 @@ public partial class MainViewModel : ObservableObject
                 var config = await JsonSerializer.DeserializeAsync<ConfigModel>(fs);
                 if (config is null) { EnsureMinimumRows(); return; }
                 Rows.Clear();
-                foreach (var rc in config.Rows)
+                var safeRows = config.Rows.Take(MaxConfigRows);
+                foreach (var rc in safeRows)
                 {
+                    // Reject rows whose scan code is out of range (0 = no key, >MaxScanCode = unknown)
+                    if (rc.ScanCode != 0 && rc.ScanCode > MaxScanCode) continue;
+
                     var row = new KeyRowViewModel
                     {
                         ActionLabel      = rc.ActionLabel,
                         Mode             = Enum.Parse<KeyMode>(rc.Mode),
-                        DelayMs          = rc.DelayMs,
+                        DelayMs          = Math.Clamp(rc.DelayMs, MinDelayMs, MaxDelayMs),
                         IsEnabled        = rc.IsEnabled,
                         ScanCode         = rc.ScanCode,
                         IsMouseInput     = rc.IsMouseInput,
